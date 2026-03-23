@@ -497,16 +497,32 @@ const aboutWords = "We're an expert team building autonomous agents at the front
       });
     })();
 
-    /* ---- Hero warp shader ---- */
-    initDitheringShader(document.getElementById('gs-hero-shader'), {
-      shape: 2, color: [0.169, 0.361, 0.886, 1.0], pxSize: 4, speed: 0.15, hoverSpeed: 0.5
+    /* ---- Lazy shader init: only create WebGL context when visible ---- */
+    function lazyShader(el: HTMLElement | null, opts: Parameters<typeof initDitheringShader>[1]) {
+      if (!el) return;
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            observer.disconnect();
+            initDitheringShader(el, opts);
+          }
+        });
+      }, { rootMargin: '200px' });
+      observer.observe(el);
+    }
+
+    /* Hero shader: init immediately (above fold) but via rIC to unblock main thread */
+    (window.requestIdleCallback || setTimeout)(function() {
+      initDitheringShader(document.getElementById('gs-hero-shader'), {
+        shape: 2, color: [0.169, 0.361, 0.886, 1.0], pxSize: 4, speed: 0.15, hoverSpeed: 0.5
+      });
     });
 
-    /* ---- About edge warp shaders ---- */
-    initDitheringShader(document.getElementById('gs-about-left'), {
+    /* About edge shaders: lazy */
+    lazyShader(document.getElementById('gs-about-left'), {
       shape: 2, color: [1, 1, 1, 1], pxSize: 4, speed: 1
     });
-    initDitheringShader(document.getElementById('gs-about-right'), {
+    lazyShader(document.getElementById('gs-about-right'), {
       shape: 2, color: [1, 1, 1, 1], pxSize: 4, speed: 1
     });
 
@@ -526,10 +542,10 @@ const aboutWords = "We're an expert team building autonomous agents at the front
       onScroll();
     })();
 
-    /* ---- Tool card shaders ---- */
+    /* Tool card shaders: lazy */
     document.querySelectorAll('.gs-tool__shader[data-shape]').forEach(function(el) {
       var colorParts = el.getAttribute('data-color')!.split(',').map(Number);
-      initDitheringShader(el as HTMLElement, {
+      lazyShader(el as HTMLElement, {
         shape: Number(el.getAttribute('data-shape')),
         color: colorParts,
         pxSize: Number(el.getAttribute('data-px')) || 2,
@@ -540,8 +556,8 @@ const aboutWords = "We're an expert team building autonomous agents at the front
       });
     });
 
-    /* ---- CTA swirl shader ---- */
-    initDitheringShader(document.getElementById('gs-cta-shader'), {
+    /* CTA shader: lazy */
+    lazyShader(document.getElementById('gs-cta-shader'), {
       shape: 6, color: [1, 1, 1, 1], pxSize: 4, speed: 0.15
     });
 
