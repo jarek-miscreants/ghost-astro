@@ -1,0 +1,847 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const tools = [
+  {
+    version: 'V0.4.2',
+    type: 'SECRET SCANNER',
+    name: 'poltergeist',
+    description: "Ghost Security Agent's secret scanner. It scans source code for leaked API keys, tokens, certificates, and credentials using a dual-engine architecture that combines speed with precision.",
+    command: '/ghost-scan-secrets',
+    tagColor: '#1D4ED8',
+    shaderShape: 5,
+    shaderColor: [0.114, 0.306, 0.847, 1],
+  },
+  {
+    version: 'V0.3.1',
+    type: 'DEPENDENCY SCANNER',
+    name: 'wraith',
+    description: "Ghost Security Agent's dependency scanner. It scans lockfiles for known vulnerabilities using the OSV database, supporting every major package ecosystem with offline mode and license scanning.",
+    command: '/ghost-scan-deps',
+    tagColor: '#6D28D9',
+    shaderShape: 6,
+    shaderColor: [0.427, 0.157, 0.851, 1],
+  },
+  {
+    version: 'V0.2.8',
+    type: 'MITM PROXY',
+    name: 'reaper',
+    description: "Ghost Security Agent's MITM HTTPS proxy. It intercepts in-scope traffic, stores full request/response pairs in a local SQLite database, and provides a CLI for searching and inspecting captured data.",
+    command: '/ghost-intercept',
+    tagColor: '#BE123C',
+    shaderShape: 2,
+    shaderColor: [0.745, 0.071, 0.235, 1],
+  },
+  {
+    version: 'V0.1.5',
+    type: 'CODE ANALYSIS',
+    name: 'exorcist',
+    description: "Ghost Security Agent's code analysis engine. It reads code like a security engineer: planning attack vectors, tracing data flows, checking for mitigations, and verifying findings independently.",
+    command: '/ghost-analyze',
+    tagColor: '#047857',
+    shaderShape: 4,
+    shaderColor: [0.016, 0.471, 0.341, 1],
+  },
+];
+
+const typeClassMap: Record<string, string> = {
+  'BOLA': 'vuln-tag--bola',
+  'SQL Injection': 'vuln-tag--sqli',
+  'Command Injection': 'vuln-tag--cmdi',
+  'Stored XSS': 'vuln-tag--xss',
+  'Auth Session Expiry': 'vuln-tag--auth',
+  'TOCTOU': 'vuln-tag--toctou',
+};
+
+const vulnerabilities = [
+  { date: 'Mar. 2026', id: 'GSR-2026-03-004', type: 'BOLA', project: '[redacted] community platform', lang: 'Ruby' },
+  { date: 'Mar. 2026', id: 'GSR-2026-03-003', type: 'SQL Injection', project: '[redacted] CMS platform', lang: 'Python' },
+  { date: 'Mar. 2026', id: 'GSR-2026-03-002', type: 'Command Injection', project: '[redacted] CMS platform', lang: 'Python' },
+  { date: 'Mar. 2026', id: 'GSR-2026-03-001', type: 'BOLA', project: '[redacted] operations platform', lang: 'Ruby' },
+  { date: 'Feb. 2026', id: 'GSR-2026-02-007', type: 'Stored XSS', project: '[redacted] CMS platform', lang: 'JavaScript' },
+  { date: 'Feb. 2026', id: 'GSR-2026-02-006', type: 'Auth Session Expiry', project: '[redacted] database', lang: 'Ruby' },
+  { date: 'Feb. 2026', id: 'GSR-2026-02-005', type: 'BOLA', project: '[redacted] vuln mgmt platform', lang: 'Ruby' },
+  { date: 'Feb. 2026', id: 'GSR-2026-02-004', type: 'BOLA', project: '[redacted] vuln mgmt platform', lang: 'Ruby' },
+  { date: 'Feb. 2026', id: 'GSR-2026-02-003', type: 'Command Injection', project: 'NPM package manager', lang: 'JavaScript' },
+  { date: 'Feb. 2026', id: 'GSR-2026-02-002', type: 'TOCTOU', project: '[redacted] commerce platform', lang: 'Python' },
+  { date: 'Feb. 2026', id: 'GSR-2026-02-001', type: 'TOCTOU', project: '[redacted] commerce platform', lang: 'TypeScript' },
+];
+---
+
+<Layout>
+  <!-- Navigation -->
+  <header class="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-border">
+    <nav class="max-w-7xl mx-auto flex items-center h-14 px-4 lg:px-8">
+      <a href="#" class="flex items-center mr-8">
+        <span class="font-bold text-lg tracking-tight">ghost</span>
+      </a>
+      <div class="hidden md:flex items-center gap-1">
+        <a href="#research" class="nav-link">[R] RESEARCH</a>
+        <a href="#tools" class="nav-link">[T] TOOLS</a>
+        <a href="#about" class="nav-link">[A] ABOUT</a>
+        <a href="https://github.com/" target="_blank" rel="noopener" class="nav-link">[G] GITHUB</a>
+      </div>
+      <a href="https://app.ghostsecurity.ai/?t=w" class="hidden md:flex ml-auto nav-link">[C] LOGIN</a>
+      <button id="mobile-menu-btn" class="md:hidden ml-auto flex items-center justify-center w-8 h-8" aria-label="Menu">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <line x1="2" y1="4" x2="14" y2="4" /><line x1="2" y1="8" x2="14" y2="8" /><line x1="2" y1="12" x2="14" y2="12" />
+        </svg>
+      </button>
+    </nav>
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="hidden md:hidden border-t border-border bg-white px-4 pb-4">
+      <a href="#research" class="block py-2 nav-link">[R] RESEARCH</a>
+      <a href="#tools" class="block py-2 nav-link">[T] TOOLS</a>
+      <a href="#about" class="block py-2 nav-link">[A] ABOUT</a>
+      <a href="https://github.com/" target="_blank" rel="noopener" class="block py-2 nav-link">[G] GITHUB</a>
+      <a href="https://app.ghostsecurity.ai/?t=w" class="block py-2 nav-link">[C] LOGIN</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="pt-14 flex flex-col relative">
+      <!-- Hero dithering shader -->
+      <div id="gs-hero-shader" class="absolute inset-0 z-0 pointer-events-none opacity-40 mix-blend-multiply"></div>
+      <div class="absolute inset-0 z-[1] pointer-events-none bg-gradient-to-r from-white via-white/85 via-25% to-transparent to-55%"></div>
+
+      <div class="relative z-10 max-w-7xl mx-auto px-4 lg:px-8 pt-20 pb-16 lg:pt-28 lg:pb-20">
+        <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+          <!-- Left: Text content -->
+          <div>
+            <p class="font-mono text-xs uppercase tracking-[0.15em] text-muted mb-6">Frontier Security Lab</p>
+            <h1 class="text-5xl md:text-6xl lg:text-5xl xl:text-7xl font-light tracking-tight leading-[1.05] mb-8">
+              Agentic AppSec Research for All Humankind.
+            </h1>
+            <p class="text-base lg:text-lg text-muted leading-relaxed max-w-xl mb-8">
+              Ghost Security builds autonomous agents and open source tools for security research. We discover, analyze, and responsibly disclose vulnerabilities at scale.
+            </p>
+            <a href="/vulnbench" class="inline-flex items-center gap-2 bg-foreground text-white font-mono text-xs uppercase tracking-[0.1em] px-5 py-3 rounded-sm hover:bg-neutral-800 transition-colors">
+              View VulnBench Report <span class="text-lg leading-none">&rarr;</span>
+            </a>
+          </div>
+
+          <!-- Right: Quick Start terminal (dark) -->
+          <div class="gs-qs bg-[#0a0a0a] border border-white/10 rounded-[5px] overflow-hidden font-mono text-sm">
+            <div class="flex items-center gap-1.5 px-3 py-2 border-b border-white/10">
+              <span class="text-[10px] tracking-[0.2em] uppercase text-white/50 mr-1 shrink-0">Quick Start</span>
+              <button class="qs-tab active" data-tab="cli">CLI</button>
+              <button class="qs-tab" data-tab="claude-code">Claude Code</button>
+              <button class="qs-tab" data-tab="manual">Manual</button>
+            </div>
+            <!-- CLI tab -->
+            <div id="gs-qs-cli">
+              <div class="p-4">
+                <p class="text-[10px] tracking-[0.15em] uppercase text-white/50 mb-2">Install</p>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd">claude plugin marketplace add ghostsecurity/skills</span></div>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd">claude plugin install ghost@ghost-security</span></div>
+              </div>
+              <div class="p-4 border-t border-white/10">
+                <p class="text-[10px] tracking-[0.15em] uppercase text-white/50 mb-2">Run</p>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd qs-cmd--green">/ghost-scan-secrets</span></div>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd qs-cmd--green">/ghost-scan-deps</span></div>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd qs-cmd--green">/ghost-scan-code</span></div>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd qs-cmd--green">/ghost-validate</span></div>
+              </div>
+            </div>
+            <!-- Claude Code tab -->
+            <div id="gs-qs-claude-code" style="display:none">
+              <div class="p-4">
+                <p class="text-[10px] tracking-[0.15em] uppercase text-white/50 mb-2">Install</p>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd">/plugin marketplace add ghostsecurity/skills</span></div>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd">/plugin install ghost@ghost-security</span></div>
+              </div>
+              <div class="p-4 border-t border-white/10">
+                <p class="text-[10px] tracking-[0.15em] uppercase text-white/50 mb-2">Run</p>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd qs-cmd--green">/ghost-scan-secrets</span></div>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd qs-cmd--green">/ghost-scan-deps</span></div>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd qs-cmd--green">/ghost-scan-code</span></div>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd qs-cmd--green">/ghost-validate</span></div>
+              </div>
+            </div>
+            <!-- Manual tab -->
+            <div id="gs-qs-manual" style="display:none">
+              <div class="p-4">
+                <p class="text-[10px] tracking-[0.15em] uppercase text-white/50 mb-2">Install</p>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd">git clone https://github.com/ghostsecurity/skills.git ~/.ghost/skills</span></div>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd">claude --plugin-dir ~/.ghost/skills</span></div>
+              </div>
+              <div class="p-4 border-t border-white/10">
+                <p class="text-[10px] tracking-[0.15em] uppercase text-white/50 mb-2">Run</p>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd qs-cmd--green">/ghost-scan-secrets</span></div>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd qs-cmd--green">/ghost-scan-deps</span></div>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd qs-cmd--green">/ghost-scan-code</span></div>
+                <div class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd qs-cmd--green">/ghost-validate</span></div>
+              </div>
+            </div>
+            <div class="border-t border-white/10 px-4 py-2.5 flex items-center justify-between">
+              <span class="text-[10px] text-white/50">Requires Claude Code v2.1.38+</span>
+              <a href="#" class="text-[10px] text-white/50 hover:text-white/80 no-underline">Full docs &rarr;</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats bar -->
+      <div class="border-y border-border relative z-10 dot-matrix-bg">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8 grid grid-cols-2 md:grid-cols-4">
+          <div class="py-8 px-4 border-r border-border">
+            <p class="text-3xl lg:text-4xl font-light tracking-tight">11+</p>
+            <p class="font-mono text-[10px] uppercase tracking-[0.15em] text-muted mt-1">CVEs Disclosed</p>
+          </div>
+          <div class="py-8 px-4 border-r border-border">
+            <p class="text-3xl lg:text-4xl font-light tracking-tight">4</p>
+            <p class="font-mono text-[10px] uppercase tracking-[0.15em] text-muted mt-1">Languages</p>
+          </div>
+          <div class="py-8 px-4 border-r border-border">
+            <p class="text-3xl lg:text-4xl font-light tracking-tight">6</p>
+            <p class="font-mono text-[10px] uppercase tracking-[0.15em] text-muted mt-1">Vuln Classes</p>
+          </div>
+          <div class="py-8 px-4">
+            <p class="text-3xl lg:text-4xl font-light tracking-tight">2026</p>
+            <p class="font-mono text-[10px] uppercase tracking-[0.15em] text-muted mt-1">Since</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- About / Word Reveal Section -->
+    <section id="about" class="relative py-[15vh] md:py-[20vh] overflow-hidden bg-neutral-950">
+      <!-- Edge shader decorations -->
+      <div id="gs-about-left" class="absolute left-0 inset-y-0 w-[200px] pointer-events-none" style="mask-image:linear-gradient(to right,rgba(0,0,0,1) 0%,rgba(0,0,0,0) 100%);-webkit-mask-image:linear-gradient(to right,rgba(0,0,0,1) 0%,rgba(0,0,0,0) 100%)"></div>
+      <div id="gs-about-right" class="absolute right-0 inset-y-0 w-[200px] pointer-events-none" style="mask-image:linear-gradient(to left,rgba(0,0,0,1) 0%,rgba(0,0,0,0) 100%);-webkit-mask-image:linear-gradient(to left,rgba(0,0,0,1) 0%,rgba(0,0,0,0) 100%)"></div>
+      <div class="relative z-10 max-w-4xl mx-auto px-6 flex items-center justify-center min-h-[20vh]">
+        <p id="gs-about-text" class="text-2xl md:text-4xl lg:text-5xl font-light tracking-tight text-white text-center leading-relaxed">
+          We're an expert team building autonomous agents at the frontier of security research, finding vulnerabilities at supernatural scale.
+        </p>
+      </div>
+    </section>
+
+    <!-- Tools Section -->
+    <section id="tools" class="border-b border-border">
+      <div class="max-w-7xl mx-auto px-4 lg:px-8 py-16 lg:py-24">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
+          <div>
+            <p class="font-mono text-xs uppercase tracking-[0.15em] text-muted mb-3">Tools</p>
+            <h2 class="text-3xl lg:text-4xl font-light tracking-tight">Agent skills & open source tools.</h2>
+          </div>
+          <a href="https://github.com/" target="_blank" rel="noopener" class="inline-flex items-center gap-2 mt-4 md:mt-0 font-mono text-xs uppercase tracking-[0.1em] text-foreground hover:underline">
+            View on GitHub <span class="text-lg leading-none">&rarr;</span>
+          </a>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+          {tools.map((tool) => (
+            <div class="gs-tool border border-border rounded-lg overflow-hidden hover:border-neutral-400 transition-colors bg-white">
+              <div class="relative w-full h-[160px] overflow-hidden bg-white">
+                <div class="gs-tool__shader absolute inset-0 opacity-10 transition-opacity duration-500" id={`gs-shader-${tool.name}`}
+                  data-shape={tool.shaderShape}
+                  data-color={JSON.stringify(tool.shaderColor)}></div>
+                <div class="absolute top-3 right-3 font-mono text-[9px] text-muted/30 uppercase tracking-[0.1em]">{tool.version}</div>
+              </div>
+              <div class="p-5">
+                <span class="font-mono text-[10px] uppercase tracking-[0.2em] block mb-1.5" style={`color: ${tool.tagColor}`}>&#9642; {tool.type}</span>
+                <h3 class="font-mono text-lg font-medium tracking-tight mb-2">{tool.name}</h3>
+                <p class="text-sm text-muted leading-relaxed mb-4">{tool.description}</p>
+              </div>
+              <div class="border-t border-border px-5 py-3">
+                <div class="flex items-center gap-2 bg-accent rounded px-3 py-2">
+                  <span class="text-muted font-mono text-sm">&gt;</span>
+                  <code class="font-mono text-sm">{tool.command}</code>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- ASCII Transition -->
+    <section class="relative overflow-hidden border-b border-white/[0.06] bg-neutral-950 text-white/10 py-8 font-mono text-xs leading-relaxed overflow-x-hidden">
+      <div class="px-4">
+        <p class="whitespace-nowrap overflow-hidden">{'░'.repeat(200)}</p>
+        <p class="whitespace-nowrap overflow-hidden">{'▒'.repeat(200)}</p>
+        <p class="whitespace-nowrap overflow-hidden">{'▓'.repeat(200)}</p>
+        <p class="whitespace-nowrap overflow-hidden">{'░'.repeat(200)}</p>
+        <p class="whitespace-nowrap overflow-hidden">{'▒'.repeat(200)}</p>
+      </div>
+    </section>
+
+    <!-- VulnBench Section -->
+    <section class="bg-neutral-950 text-white relative overflow-hidden">
+      <div id="gs-cta-shader" class="absolute inset-0 z-0 pointer-events-none opacity-[0.08]"></div>
+      <div class="max-w-7xl mx-auto px-4 lg:px-8 py-16 lg:py-24 relative z-10">
+        <p class="font-mono text-xs uppercase tracking-[0.15em] text-white/40 mb-3">VulnBench</p>
+        <h2 class="text-3xl lg:text-4xl font-light tracking-tight text-white mb-3">
+          VulnBench: Measuring AI Security Skill.
+        </h2>
+        <p class="text-base text-white/60 leading-relaxed max-w-2xl mb-8">
+          Our open research benchmark evaluates how well AI models discover real-world security vulnerabilities across diverse codebases and attack surfaces.
+        </p>
+        <a href="/vulnbench" class="inline-flex items-center gap-2 bg-white text-black font-mono text-xs uppercase tracking-[0.1em] px-5 py-3 rounded-sm hover:bg-white/90 transition-colors">
+          View Report <span class="text-lg leading-none">&rarr;</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Dashed Line Transition -->
+    <section class="border-b border-border relative overflow-hidden py-6 text-neutral-200 font-mono text-xs leading-loose">
+      <div class="px-4 space-y-1">
+        <p class="whitespace-nowrap overflow-hidden">{'─ '.repeat(175)}</p>
+        <p class="whitespace-nowrap overflow-hidden">{'─ '.repeat(175)}</p>
+        <p class="whitespace-nowrap overflow-hidden">{'─ '.repeat(175)}</p>
+        <p class="whitespace-nowrap overflow-hidden">{'─ '.repeat(175)}</p>
+      </div>
+    </section>
+
+    <!-- Research Section -->
+    <section id="research" class="border-b border-border">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="py-12 border-b border-border max-w-3xl">
+          <p class="font-mono text-xs uppercase tracking-[0.2em] text-muted mb-3">Research</p>
+          <h2 class="text-3xl lg:text-4xl font-light tracking-tight mb-3">Recent vulnerability disclosures.</h2>
+          <p class="text-sm text-muted leading-relaxed">
+            The Ghost Security Research team has discovered and disclosed a number of vulnerabilities using Ghost Security Agent Skills. All findings are responsibly disclosed to maintainers prior to publication.
+          </p>
+        </div>
+
+        <!-- Interactive 2-column: table + detail panel -->
+        <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] border-b border-border">
+          <div class="border-r border-border overflow-x-auto" id="gs-research-table">
+            <table class="w-full text-sm border-collapse">
+              <thead>
+                <tr>
+                  <th class="text-left font-mono text-xs uppercase tracking-[0.1em] text-muted font-normal p-4 border-b border-border">Discovered</th>
+                  <th class="text-left font-mono text-xs uppercase tracking-[0.1em] text-muted font-normal p-4 border-b border-border">Vulnerability</th>
+                  <th class="text-left font-mono text-xs uppercase tracking-[0.1em] text-muted font-normal p-4 border-b border-border">Type</th>
+                  <th class="text-left font-mono text-xs uppercase tracking-[0.1em] text-muted font-normal p-4 border-b border-border">Project</th>
+                  <th class="text-left font-mono text-xs uppercase tracking-[0.1em] text-muted font-normal p-4 border-b border-border">Lang</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vulnerabilities.map((vuln, i) => (
+                  <tr class="research-row cursor-pointer transition-colors" data-idx={i}>
+                    <td class="p-4 border-b border-border font-mono text-xs text-muted whitespace-nowrap">{vuln.date}</td>
+                    <td class="p-4 border-b border-border font-mono text-xs">{vuln.id}</td>
+                    <td class="p-4 border-b border-border">
+                      <span class={`vuln-tag ${typeClassMap[vuln.type] || ''}`}>{vuln.type}</span>
+                    </td>
+                    <td class="p-4 border-b border-border text-xs text-muted max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">{vuln.project}</td>
+                    <td class="p-4 border-b border-border text-xs">{vuln.lang}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div class="research-panel p-8 flex flex-col h-full transition-colors" id="gs-research-panel">
+            <div class="flex-1" id="gs-research-panel-content"></div>
+            <div class="pt-6 border-t border-border mt-auto">
+              <p class="font-mono text-xs uppercase tracking-[0.15em] text-muted mb-3">Disclosure Policy</p>
+              <p class="text-xs text-muted leading-relaxed">Ghost Security follows a 90-day responsible disclosure policy. All vulnerabilities are privately reported to maintainers and given adequate time for remediation before public disclosure.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-border bg-white">
+    <div class="max-w-7xl mx-auto px-4 lg:px-8 py-12 lg:py-16">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+        <div>
+          <p class="font-bold text-sm mb-1">GHOST SECURITY</p>
+          <p class="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">Frontier Security Lab</p>
+        </div>
+
+        <div>
+          <p class="font-mono text-[10px] uppercase tracking-[0.15em] text-muted mb-4">Research</p>
+          <ul class="space-y-2">
+            <li><a href="#research" class="text-sm text-muted hover:text-foreground transition-colors">Vulnerability Disclosures</a></li>
+            <li><a href="#research" class="text-sm text-muted hover:text-foreground transition-colors">CVE Database</a></li>
+            <li><a href="#research" class="text-sm text-muted hover:text-foreground transition-colors">Security Advisories</a></li>
+            <li><a href="#research" class="text-sm text-muted hover:text-foreground transition-colors">Research Blog</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="font-mono text-[10px] uppercase tracking-[0.15em] text-muted mb-4">Tools</p>
+          <ul class="space-y-2">
+            <li><a href="#tools" class="text-sm text-muted hover:text-foreground transition-colors">poltergeist</a></li>
+            <li><a href="#tools" class="text-sm text-muted hover:text-foreground transition-colors">wraith</a></li>
+            <li><a href="#tools" class="text-sm text-muted hover:text-foreground transition-colors">reaper</a></li>
+            <li><a href="#tools" class="text-sm text-muted hover:text-foreground transition-colors">exorcist</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="font-mono text-[10px] uppercase tracking-[0.15em] text-muted mb-4">Connect</p>
+          <ul class="space-y-2">
+            <li><a href="https://github.com/" target="_blank" rel="noopener" class="text-sm text-muted hover:text-foreground transition-colors">GitHub</a></li>
+            <li><a href="#" class="text-sm text-muted hover:text-foreground transition-colors">Security Contact</a></li>
+            <li><a href="#" class="text-sm text-muted hover:text-foreground transition-colors">CVD Policy</a></li>
+            <li><a href="#" class="text-sm text-muted hover:text-foreground transition-colors">PGP Key</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="border-t border-border pt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+        <p class="font-mono text-[10px] uppercase tracking-[0.1em] text-muted">&copy; 2026 Ghost Security. All rights reserved.</p>
+        <p class="font-mono text-[10px] uppercase tracking-[0.1em] text-muted">All vulnerabilities responsibly disclosed.</p>
+      </div>
+    </div>
+  </footer>
+
+  <style>
+    .nav-link {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #737373;
+      padding: 0.25rem 0.75rem;
+      transition: color 0.15s;
+    }
+    .nav-link:hover {
+      color: #0f0f0f;
+    }
+    /* Quick Start terminal */
+    .qs-tab {
+      padding: 4px 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      border-radius: 3px;
+      color: rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.05);
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .qs-tab.active {
+      color: #fff;
+      background: rgba(255,255,255,0.15);
+    }
+    .qs-tab:hover {
+      color: rgba(255,255,255,0.7);
+      background: rgba(255,255,255,0.1);
+    }
+    .qs-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      line-height: 1.6;
+      padding: 2px 8px;
+      margin: 0 -8px;
+      border-radius: 2px;
+    }
+    .qs-line:hover {
+      background: rgba(255,255,255,0.03);
+    }
+    .qs-prompt {
+      color: rgba(255,255,255,0.4);
+      flex-shrink: 0;
+    }
+    .qs-cmd {
+      color: rgba(255,255,255,0.9);
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .qs-cmd--green {
+      color: rgba(52,211,153,0.9);
+    }
+    .gs-tool:hover .gs-tool__shader {
+      opacity: 0.55 !important;
+    }
+    #gs-hero-shader canvas,
+    #gs-about-left canvas,
+    #gs-about-right canvas,
+    #gs-cta-shader canvas,
+    .gs-tool__shader canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    #gs-about-left canvas,
+    #gs-about-right canvas {
+      opacity: 0.06;
+      mix-blend-mode: screen;
+    }
+    #gs-about-text span {
+      opacity: 0.12;
+      transition: opacity 0.4s;
+    }
+    /* Vulnerability type tags */
+    .vuln-tag {
+      display: inline-flex;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+    .vuln-tag--bola {
+      color: #78350f;
+      background: rgba(245, 158, 11, 0.1);
+      border-color: #fcd34d;
+    }
+    .vuln-tag--sqli {
+      color: #881337;
+      background: rgba(244, 63, 94, 0.1);
+      border-color: #fda4af;
+    }
+    .vuln-tag--cmdi {
+      color: #881337;
+      background: rgba(244, 63, 94, 0.1);
+      border-color: #fda4af;
+    }
+    .vuln-tag--xss {
+      color: #4c1d95;
+      background: rgba(139, 92, 246, 0.1);
+      border-color: #c4b5fd;
+    }
+    .vuln-tag--auth {
+      color: #312e81;
+      background: rgba(99, 102, 241, 0.1);
+      border-color: #a5b4fc;
+    }
+    .vuln-tag--toctou {
+      color: #134e4a;
+      background: rgba(20, 184, 166, 0.1);
+      border-color: #5eead4;
+    }
+    /* Research row hover */
+    .research-row:hover,
+    .research-row.active {
+      background: rgba(15, 15, 15, 0.06);
+    }
+    .research-row:last-child td {
+      border-bottom: none;
+    }
+    .research-panel.active {
+      background: rgba(15, 15, 15, 0.02);
+    }
+    /* Research panel detail styles */
+    .research-panel-badges {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .research-panel-title {
+      font-family: var(--font-mono);
+      font-size: 18px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      margin: 0 0 4px;
+    }
+    .research-panel-meta {
+      font-size: 12px;
+      color: var(--color-muted);
+      margin-bottom: 12px;
+    }
+    .research-panel-desc {
+      font-size: 12px;
+      color: var(--color-muted);
+      line-height: 1.6;
+    }
+    /* Language bar in panel */
+    .lang-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .lang-name {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      width: 96px;
+      flex-shrink: 0;
+    }
+    .lang-bar {
+      flex: 1;
+      height: 1px;
+      background: var(--color-border);
+      position: relative;
+    }
+    .lang-fill {
+      position: absolute;
+      top: -0.5px;
+      left: 0;
+      height: 2px;
+      background: rgba(15, 15, 15, 0.4);
+    }
+    .lang-count {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--color-muted);
+      width: 16px;
+      text-align: right;
+    }
+  </style>
+
+  <script>
+    // Mobile menu toggle
+    const btn = document.getElementById('mobile-menu-btn');
+    const menu = document.getElementById('mobile-menu');
+    btn?.addEventListener('click', () => {
+      menu?.classList.toggle('hidden');
+    });
+
+    // Quick Start tab switching
+    const qsTabs = document.querySelectorAll('.qs-tab');
+    const qsPanelIds = ['cli', 'claude-code', 'manual'];
+    qsTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        qsTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const activeTab = tab.getAttribute('data-tab');
+        qsPanelIds.forEach(id => {
+          const el = document.getElementById('gs-qs-' + id);
+          if (el) el.style.display = activeTab === id ? '' : 'none';
+        });
+      });
+    });
+
+    /* ── Dithering Shader Helper ── */
+    function initDitheringShader(container: HTMLElement | null, opts: { shape: number; color: number[]; pxSize?: number; speed?: number; hoverSpeed?: number; resWidth?: number; resHeight?: number }) {
+      if (!container) return;
+      const canvas = document.createElement('canvas');
+      canvas.style.cssText = 'display:block;width:100%;height:100%';
+      container.appendChild(canvas);
+      const gl = canvas.getContext('webgl2');
+      if (!gl) { container.style.display = 'none'; return; }
+
+      const vs = '#version 300 es\nprecision mediump float;\nlayout(location=0) in vec4 a_position;\nvoid main(){gl_Position=a_position;}';
+
+      const fs = '#version 300 es\n' +
+        'precision mediump float;\n' +
+        'uniform float u_time;uniform vec2 u_resolution;uniform vec4 u_colorFront;uniform float u_shape;uniform float u_pxSize;\n' +
+        'out vec4 fragColor;\n' +
+        '#define TWO_PI 6.28318530718\n' +
+        'float hash11(float p){p=fract(p*0.3183099)+0.1;p*=p+19.19;return fract(p*p);}\n' +
+        'vec3 permute(vec3 x){return mod(((x*34.0)+1.0)*x,289.0);}\n' +
+        'float snoise(vec2 v){const vec4 C=vec4(0.211324865405187,0.366025403784439,-0.577350269189626,0.024390243902439);vec2 i=floor(v+dot(v,C.yy));vec2 x0=v-i+dot(i,C.xx);vec2 i1=(x0.x>x0.y)?vec2(1.0,0.0):vec2(0.0,1.0);vec4 x12=x0.xyxy+C.xxzz;x12.xy-=i1;i=mod(i,289.0);vec3 p=permute(permute(i.y+vec3(0.0,i1.y,1.0))+i.x+vec3(0.0,i1.x,1.0));vec3 m=max(0.5-vec3(dot(x0,x0),dot(x12.xy,x12.xy),dot(x12.zw,x12.zw)),0.0);m=m*m;m=m*m;vec3 x2=2.0*fract(p*C.www)-1.0;vec3 h=abs(x2)-0.5;vec3 ox=floor(x2+0.5);vec3 a0=x2-ox;m*=1.79284291400159-0.85373472095314*(a0*a0+h*h);vec3 g;g.x=a0.x*x0.x+h.x*x0.y;g.yz=a0.yz*x12.xz+h.yz*x12.yw;return 130.0*dot(m,g);}\n' +
+        'float getSimplexNoise(vec2 uv,float t){return .5*snoise(uv-vec2(0.,.3*t))+.5*snoise(2.*uv+vec2(0.,.32*t));}\n' +
+        'const int bayer4x4[16]=int[16](0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5);\n' +
+        'float getBayerValue(vec2 uv){ivec2 pos=ivec2(mod(uv,4.0));return float(bayer4x4[pos.y*4+pos.x])/16.0;}\n' +
+        'void main(){\n' +
+        '  float t=.5*u_time;\n' +
+        '  vec2 uv=gl_FragCoord.xy/u_resolution.xy;uv-=.5;\n' +
+        '  float pxSize=u_pxSize;\n' +
+        '  vec2 pxSizeUv=gl_FragCoord.xy;pxSizeUv-=.5*u_resolution;pxSizeUv/=pxSize;\n' +
+        '  vec2 pixelizedUv=floor(pxSizeUv)*pxSize/u_resolution.xy;pixelizedUv+=.5;pixelizedUv-=.5;\n' +
+        '  vec2 shape_uv=pixelizedUv;\n' +
+        '  float shape=0.0;\n' +
+        '  if(u_shape<1.5){\n' +
+        '    vec2 simplex_uv=pxSizeUv*.001;\n' +
+        '    shape=0.5+0.5*getSimplexNoise(simplex_uv,t);shape=smoothstep(0.3,0.9,shape);\n' +
+        '  }else if(u_shape<2.5){\n' +
+        '    vec2 warp_uv=pxSizeUv*.006;\n' +
+        '    for(float i=1.0;i<8.0;i++){warp_uv.x+=0.3/i*sin(i*2.3*warp_uv.y+t*0.6+i*0.7);warp_uv.y+=0.3/i*cos(i*1.9*warp_uv.x+t*0.4+i*0.5);}\n' +
+        '    float v1=sin(warp_uv.x*3.0+warp_uv.y*2.5+t*0.8);float v2=cos(warp_uv.y*3.5-warp_uv.x*2.0-t*0.5);float v3=sin(warp_uv.x*1.5-warp_uv.y*2.8+t*0.3);\n' +
+        '    shape=0.5+0.5*sin(v1*2.0+v2*2.0+v3*1.5);shape=pow(shape,1.8);\n' +
+        '  }else if(u_shape<3.5){\n' +
+        '    shape_uv*=.05;\n' +
+        '    float stripeIdx=floor(2.*shape_uv.x/TWO_PI);float rand=hash11(stripeIdx*10.);\n' +
+        '    rand=sign(rand-.5)*pow(.1+abs(rand),.4);\n' +
+        '    shape=sin(shape_uv.x)*cos(shape_uv.y-5.*rand*t);shape=pow(abs(shape),6.);\n' +
+        '  }else if(u_shape<4.5){\n' +
+        '    shape_uv*=4.;\n' +
+        '    float wave=cos(.5*shape_uv.x-2.*t)*sin(1.5*shape_uv.x+t)*(.75+.25*cos(3.*t));\n' +
+        '    shape=1.-smoothstep(-1.,1.,shape_uv.y+wave);\n' +
+        '  }else if(u_shape<5.5){\n' +
+        '    float dist=length(shape_uv);float waves=sin(pow(dist,1.7)*7.-3.*t)*.5+.5;shape=waves;\n' +
+        '  }else if(u_shape<6.5){\n' +
+        '    float l=length(shape_uv);float angle=6.*atan(shape_uv.y,shape_uv.x)+4.*t;\n' +
+        '    float twist=1.2;float offset=pow(l,-twist)+angle/TWO_PI;\n' +
+        '    float mid=smoothstep(0.,1.,pow(l,twist));shape=mix(0.,fract(offset),mid);\n' +
+        '  }\n' +
+        '  float dithering=getBayerValue(pxSizeUv);dithering-=.5;float res=step(.5,shape+dithering);\n' +
+        '  vec3 fg=u_colorFront.rgb*u_colorFront.a;fragColor=vec4(fg*res,u_colorFront.a*res);\n' +
+        '}';
+
+      function compile(type: number, src: string) {
+        const s = gl.createShader(type)!;
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null;
+      }
+      const vShader = compile(gl.VERTEX_SHADER, vs);
+      const fShader = compile(gl.FRAGMENT_SHADER, fs);
+      if (!vShader || !fShader) { container.style.display = 'none'; return; }
+
+      const program = gl.createProgram()!;
+      gl.attachShader(program, vShader);
+      gl.attachShader(program, fShader);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) { container.style.display = 'none'; return; }
+
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
+      const posAttr = gl.getAttribLocation(program, 'a_position');
+      gl.enableVertexAttribArray(posAttr);
+      gl.vertexAttribPointer(posAttr, 2, gl.FLOAT, false, 0, 0);
+
+      const uTime = gl.getUniformLocation(program, 'u_time');
+      const uRes = gl.getUniformLocation(program, 'u_resolution');
+      const uColor = gl.getUniformLocation(program, 'u_colorFront');
+      const uShape = gl.getUniformLocation(program, 'u_shape');
+      const uPxSize = gl.getUniformLocation(program, 'u_pxSize');
+      let accTime = 0, lastFrame = Date.now();
+      let speed = opts.speed || 1;
+      let targetSpeed = speed;
+
+      if (opts.hoverSpeed) {
+        container.parentElement?.addEventListener('mouseenter', () => { targetSpeed = opts.hoverSpeed!; });
+        container.parentElement?.addEventListener('mouseleave', () => { targetSpeed = opts.speed || 1; });
+      }
+
+      function resize() {
+        if (opts.resWidth && opts.resHeight) {
+          canvas.width = opts.resWidth; canvas.height = opts.resHeight;
+        } else {
+          const r = container.getBoundingClientRect();
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          canvas.width = r.width * dpr; canvas.height = r.height * dpr;
+        }
+        gl.viewport(0, 0, canvas.width, canvas.height);
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      (function render() {
+        const now = Date.now();
+        const delta = (now - lastFrame) * 0.001;
+        lastFrame = now;
+        speed += (targetSpeed - speed) * 0.05;
+        accTime += delta * speed;
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.useProgram(program);
+        gl.uniform1f(uTime, accTime);
+        gl.uniform2f(uRes, canvas.width, canvas.height);
+        gl.uniform4fv(uColor, opts.color);
+        gl.uniform1f(uShape, opts.shape);
+        gl.uniform1f(uPxSize, opts.pxSize || 4.0);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        requestAnimationFrame(render);
+      })();
+    }
+
+    /* ── Initialize shaders ── */
+
+    // Hero: warp shader (shape 2), blue
+    initDitheringShader(document.getElementById('gs-hero-shader'), {
+      shape: 2, color: [0.169, 0.361, 0.886, 1.0], pxSize: 4, speed: 0.15, hoverSpeed: 0.5
+    });
+
+    // About section edge shaders
+    initDitheringShader(document.getElementById('gs-about-left'), {
+      shape: 2, color: [1, 1, 1, 1], pxSize: 4, speed: 1
+    });
+    initDitheringShader(document.getElementById('gs-about-right'), {
+      shape: 2, color: [1, 1, 1, 1], pxSize: 4, speed: 1
+    });
+
+    // Tool card shaders
+    document.querySelectorAll('.gs-tool__shader').forEach((el) => {
+      const shape = Number(el.getAttribute('data-shape'));
+      const color = JSON.parse(el.getAttribute('data-color') || '[0,0,0,1]');
+      initDitheringShader(el as HTMLElement, {
+        shape, color, pxSize: 2, speed: 0.2, hoverSpeed: 0.8, resWidth: 400, resHeight: 150
+      });
+    });
+
+    // VulnBench CTA: swirl shader (shape 6), white
+    initDitheringShader(document.getElementById('gs-cta-shader'), {
+      shape: 6, color: [1, 1, 1, 1], pxSize: 4, speed: 0.15
+    });
+
+    /* ── Research table interaction ── */
+    (function () {
+      const vulnDescs: Record<string, string> = {
+        'BOLA': 'Broken Object Level Authorization \u2014 an attacker can access or modify resources belonging to other users by manipulating object identifiers in API requests.',
+        'SQL Injection': 'Untrusted input is interpolated directly into SQL queries, allowing an attacker to read, modify, or delete database contents.',
+        'Command Injection': 'User-controlled input is passed unsanitized to a system shell, enabling arbitrary command execution on the server.',
+        'Stored XSS': 'Malicious scripts are persisted in the application\u2019s data store and executed in other users\u2019 browsers when the data is rendered.',
+        'Auth Session Expiry': 'Session tokens remain valid indefinitely or far beyond a reasonable window, increasing the risk of session hijacking.',
+        'TOCTOU': 'Time-of-check to time-of-use race condition \u2014 a gap between authorization check and action allows an attacker to exploit the window.'
+      };
+      const langColors: Record<string, string> = { Ruby: '#be123c', Python: '#1d4ed8', JavaScript: '#b45309', TypeScript: '#0284c7' };
+      const rows = document.querySelectorAll<HTMLTableRowElement>('#gs-research-table tbody tr');
+      const panel = document.getElementById('gs-research-panel');
+      const content = document.getElementById('gs-research-panel-content');
+      if (!panel || !content) return;
+      const total = rows.length;
+
+      function langSummaryHTML() {
+        const counts: Record<string, number> = {};
+        rows.forEach(r => {
+          const lang = r.cells[4].textContent!.trim();
+          counts[lang] = (counts[lang] || 0) + 1;
+        });
+        const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+        let html = '<p class="font-mono text-xs uppercase tracking-[0.15em] text-muted mb-3">Languages Affected</p>';
+        sorted.forEach(([name, count]) => {
+          const pct = (count / total * 100).toFixed(0);
+          html += `<div class="lang-row"><span class="lang-name" style="color:${langColors[name] || 'var(--color-muted)'}">${name}</span><div class="lang-bar"><div class="lang-fill" style="width:${pct}%"></div></div><span class="lang-count">${count}</span></div>`;
+        });
+        return html;
+      }
+
+      content.innerHTML = langSummaryHTML();
+
+      const tableWrap = document.getElementById('gs-research-table');
+      tableWrap?.addEventListener('mouseleave', () => {
+        rows.forEach(r => r.classList.remove('active'));
+        panel.classList.remove('active');
+        content.innerHTML = langSummaryHTML();
+      });
+
+      rows.forEach(row => {
+        row.addEventListener('mouseenter', () => {
+          rows.forEach(r => r.classList.remove('active'));
+          row.classList.add('active');
+          panel.classList.add('active');
+          const id = row.cells[1].textContent!.trim();
+          const typeSpan = row.querySelector('.vuln-tag')!;
+          const type = typeSpan.textContent!.trim();
+          const date = row.cells[0].textContent!.trim();
+          const project = row.cells[3].textContent!.trim();
+          const lang = row.cells[4].textContent!.trim();
+          const typeClass = typeSpan.className;
+          content.innerHTML =
+            `<div class="research-panel-badges"><span class="${typeClass}">${type}</span><span class="lang-name" style="color:${langColors[lang] || 'var(--color-muted)'}">${lang}</span></div>` +
+            `<h3 class="research-panel-title">${id}</h3>` +
+            `<p class="research-panel-meta">${date} &middot; ${project}</p>` +
+            `<p class="research-panel-desc">${vulnDescs[type] || type}</p>`;
+        });
+      });
+    })();
+
+    /* ── Scroll-based word reveal ── */
+    (function () {
+      const textEl = document.getElementById('gs-about-text');
+      if (!textEl) return;
+      const words = textEl.textContent!.trim().split(/\s+/);
+      textEl.innerHTML = words.map(w => `<span>${w}</span>`).join(' ');
+      const spans = textEl.querySelectorAll('span');
+      function onScroll() {
+        const rect = textEl!.getBoundingClientRect();
+        const progress = Math.max(0, Math.min(1, 1 - (rect.top - window.innerHeight * 0.3) / (window.innerHeight * 0.5)));
+        spans.forEach((span, i) => {
+          const wordProgress = i / spans.length;
+          (span as HTMLElement).style.opacity = wordProgress < progress ? '1' : '0.12';
+        });
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</Layout>
